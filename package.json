@@ -1,0 +1,24 @@
+{
+  "name": "discrypt",
+  "version": "1.0.0",
+  "description": "Encrypt Discord messages in the browser.",
+  "main": "manifest.json",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khafradev/discrypt.git"
+  },
+  "keywords": [
+    "discord",
+    "encryption",
+    "encrypt"
+  ],
+  "author": "Khafra",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/khafradev/discrypt/issues"
+  },
+  "homepage": "https://github.com/khafradev/discrypt#readme"
+}

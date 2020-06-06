@@ -1,0 +1,20 @@
+{
+
+    "manifest_version": 2,
+    "name": "Discrypt",
+    "version": "1.0",
+  
+    "description": "Encrypt and Decrypt Discord messages.",
+
+    "content_scripts": [
+        {
+            "matches": ["https://discord.com/*"],
+            "js": ["index.js", "Snowflake.js"]
+        },
+        {
+            "matches": ["https://discord.com/*"],
+            "js": ["sjcl.min.js"],
+            "run_at": "document_start"
+        }
+    ]
+}
