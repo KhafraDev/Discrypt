@@ -193,7 +193,8 @@ chrome.runtime.onMessage.addListener(req => {
                 
                     if(password) {
                         // yikes
-                        const _ = e.target.parentElement.parentElement.parentElement.parentElement.children[0].querySelector('div');
+                        const _ = dupe.parentElement.parentElement.parentElement.parentElement.children[0].querySelector('div');
+
                         try {
                             _.textContent = sjcl.decrypt(password, _.textContent);
                             _.style.border = '1px solid green';
