@@ -1,9 +1,14 @@
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if(changeInfo.url) {
-        chrome.tabs.sendMessage(tabId, {
-            message: 'com.khafradev.urlUpdate',
-            url: changeInfo.url
-        });
+        try {
+            chrome.tabs.sendMessage(tabId, {
+                message: 'com.khafradev.urlUpdate',
+                url: changeInfo.url
+            });
+        } catch(e) {
+            // does console even work here...?
+            console.error(e);
+        }
     }
 });
 

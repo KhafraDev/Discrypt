@@ -26,24 +26,17 @@ const addButton = () => {
         return;
     }
 
-    const buttonChild = document.createElement('button');
+    const buttonChild = buttonParent.children[0].cloneNode(true);
     buttonChild.style = 'background-color: #40444B';
-    buttonChild.id = 'KHAFRA';
-    buttonChild.innerHTML = `
-    <svg class="bi bi-lock-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <rect width="11" height="9" x="2.5" y="7" rx="2"/>
-        <path fill-rule="evenodd" d="M4.5 4a3.5 3.5 0 1 1 7 0v3h-1V4a2.5 2.5 0 0 0-5 0v3h-1V4z"/>
+    buttonChild.id = 'discryptEncrypt';
+    buttonChild.setAttribute('aria-label', 'Encrypt Message');
+    buttonChild.children[0].innerHTML = `
+    <svg class="bi bi-shield-lock-fill" width="24" height="24" viewBox="0 -2 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" d="M5.187 1.025C6.23.749 7.337.5 8 .5c.662 0 1.77.249 2.813.525a61.09 61.09 0 0 1 2.772.815c.528.168.926.623 1.003 1.184.573 4.197-.756 7.307-2.367 9.365a11.191 11.191 0 0 1-2.418 2.3 6.942 6.942 0 0 1-1.007.586c-.27.124-.558.225-.796.225s-.526-.101-.796-.225a6.908 6.908 0 0 1-1.007-.586 11.192 11.192 0 0 1-2.417-2.3C2.167 10.331.839 7.221 1.412 3.024A1.454 1.454 0 0 1 2.415 1.84a61.11 61.11 0 0 1 2.772-.815zm3.328 6.884a1.5 1.5 0 1 0-1.06-.011.5.5 0 0 0-.044.136l-.333 2a.5.5 0 0 0 .493.582h.835a.5.5 0 0 0 .493-.585l-.347-2a.5.5 0 0 0-.037-.122z"/>
     </svg>`;
 
-    if(buttonParent) {
-        buttonParent.appendChild(buttonChild);
-        const btn = document.getElementById('KHAFRA');
-        btn.addEventListener('click', () => sendMessage());
-        // some future animation on mouseover
-        // btn.addEventListener('mouseover')
-    } else {
-        console.log('button container not found!', document.querySelector('div[class*="buttons-"]:not([aria-label])'));
-    }
+    buttonParent.appendChild(buttonChild);
+    buttonChild.addEventListener('click', sendMessage);
 }
 
 /**
@@ -69,19 +62,15 @@ const sendMessage = async () => {
 
     const textElement = document.querySelector('span[data-slate-string="true"]');
     if(!textElement) {
-        console.log('text element not found on DOM');
-        return;
+        return; // no text in element
     }
 
-    const text = textElement.textContent;
-    if(!text.length) {
-        console.log('text element is empty');
-        return;
+    if(!textElement.textContent.length) {
+        return; // if element contains blank characters, maybe (ie. spaces)?
     }
 
     const channelID = location.href.split('/').pop();
     if(!channelID.split('').every(c => !isNaN(c))) {
-        console.log('invalid channelID');
         return;
     }
 
@@ -95,7 +84,7 @@ const sendMessage = async () => {
     fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
         method: 'POST',
         body: JSON.stringify({
-            "content": sjcl.encrypt(password, text, {
+            "content": sjcl.encrypt(password, textElement.textContent, {
                 count: 2048,
                 ks: 256
             }),
@@ -111,7 +100,14 @@ const sendMessage = async () => {
             'X-Fingerprint': Fingerprint || await fingerprint()
         }
     }).then(r => {
-        alert('Message sent, status: ' + r.status + ' (' + r.statusText + ').');
+        if(r.status !== 200) {
+            alert('Received status ' + r.status + '! (' + r.statusText + ').');
+        }
+
+        textElement.removeAttribute('data-slate-string');
+        textElement.setAttribute('data-slate-zero-width', 'z');
+        textElement.setAttribute('data-slate-length', '0');
+        textElement.textContent = '\ufeff' // zero width no-break space
     });
 }
 
@@ -131,12 +127,11 @@ const fingerprint = async () => {
             'Content-Type': 'application/json',
             'User-Agent': navigator.userAgent,
             'X-Fingerprint': '',
-            'X-Context-Properties': ContextProperties // somehow missed this completely
+            'X-Context-Properties': ContextProperties
         }
     });
 
-    const { fingerprint } = await res.json();
-    Fingerprint = fingerprint;
+    Fingerprint = (await res.json()).fingerprint;
     return Fingerprint;
 }
 
@@ -151,11 +146,9 @@ chrome.runtime.onMessage.addListener(req => {
             if( e.target.tagName === 'DIV' && 
                 (e.target.children.length === 0 || e.target.childNodes[0].nodeName === '#text')
             ) {
-                /**
-                 * @type {HTMLElement}
-                 */
-                const bC = e.target.parentElement.parentElement; //.querySelector('div[class*="buttonContainer"] > div > div');
-                const bCC = bC.children[bC.children.length - 1].children[0].children[0];
+                /*** @type {HTMLElement} */
+                const bC = getParentLikeId(e.target, /messages-\d+/);
+                const bCC = bC ? bC.querySelector('div[class*="wrapper-"]') : null;
 
                 if(!bC || !bCC) { 
                     // buttonContainer doesn't exist
@@ -188,26 +181,44 @@ chrome.runtime.onMessage.addListener(req => {
 
                 bCC.appendChild(dupe);
 
-                dupe.addEventListener('click', async e => {  
+                dupe.addEventListener('click', async () => {  
                     const { password } = (await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r)));
-                
+
                     if(password) {
-                        // yikes
-                        const _ = dupe.parentElement.parentElement.parentElement.parentElement.children[0].querySelector('div');
+                        const _ = bC.querySelector('div[class*="messageContent-"]');
+                        if(!_) {
+                            return; 
+                        }
 
                         try {
                             _.textContent = sjcl.decrypt(password, _.textContent);
                             _.style.border = '1px solid green';
                         } catch(e) {
-                            console.error(e);
                             _.style.border = '1px solid red';
                         }
                     }  
                 });
             }
-        })
+        });
     }
 });
 
-// only needs to run once
-window.addEventListener('load', () => chrome.runtime.sendMessage({ pw: true }, r => console.log('Loaded password. ' + r.password)));
+/**
+ * Get a (grand-grand-nth)parent element that matches id.
+ * @example
+ *  const element = getParentLikeId(document.querySelector('.child'), 'message-'); // HTMLElement
+ *  const element = getParentLikeId(document.querySelector('.child'), 'non-existent'); // undefined
+ * @param {HTMLElement} e element
+ * @param {string|RegExp} id element ID to get
+ * @returns {HTMLElement} parent element
+ */
+const getParentLikeId = (e, id) => {
+    while(e = e.parentElement) {
+        if(e.id.match(id)) {
+            return e;
+        }
+    }
+}
+
+// only needs to run once to propagate password
+window.addEventListener('load', () => chrome.runtime.sendMessage({ pw: true }, () => {}));

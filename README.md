@@ -34,8 +34,9 @@ Failed to decrypt
 
 # Known bugs
 1. On startup you have to go to a different channel/server before buttons are added. Not really a bug since it's caused by the way I handle adding buttons.
-2. Probably only works on Firefox, and possibly Edge. However it's only tested on Firefox since Chrome+Edge are spyware. 
-3. Emojis are completely removed from the text.
+2. Emojis are completely removed from the text.
+3. Might not work on Chrome/Edge/Opera. Chrome support is likely, but it'll never be tested anywhere other than Firefox.
+4. Popup looks bad because I dislike HTML and CSS very much.
 
 # Changelog
 ## v1.0.0
@@ -54,3 +55,10 @@ Failed to decrypt
 * Detect if password isn't set instead of using an insecure default password.
 * Password is propagated when the page loads, instead of it needing to be reset. 
 * Add images to README.
+
+## v1.0.3
+* Don't alert on message send, only on failure.
+* Clear the message box after sending a message.
+* Better method of getting certain elements that doesn't throw errors.
+* Stops password from being logged into console, after all Discord does some funky stuff with ``console``. 
+* Better encrypt icon, again. Feels *almost* native, just needs to be a bit bigger.
