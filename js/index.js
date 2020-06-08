@@ -85,14 +85,17 @@ const sendMessage = async () => {
         return;
     }
 
-    const { password } = await browser.runtime.sendMessage({
-        pw: true
-    });
+    const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
+
+    if(!password) {
+        alert('Please set a password!');
+        return;
+    }
 
     fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
         method: 'POST',
         body: JSON.stringify({
-            "content": sjcl.encrypt(password || 'default23', text, {
+            "content": sjcl.encrypt(password, text, {
                 count: 2048,
                 ks: 256
             }),
@@ -105,7 +108,7 @@ const sendMessage = async () => {
             'Content-Type': 'application/json',
             'Authorization': token,
             'X-Super-Properties': SP,
-            'X-Fingerprint': await fingerprint()
+            'X-Fingerprint': Fingerprint || await fingerprint()
         }
     }).then(r => {
         alert('Message sent, status: ' + r.status + ' (' + r.statusText + ').');
@@ -137,9 +140,8 @@ const fingerprint = async () => {
     return Fingerprint;
 }
 
-chrome.runtime.onMessage.addListener(request => {
-    if(request.message === 'com.khafradev.urlUpdate') {
-        console.log('khafra says new url is ' + request.url);
+chrome.runtime.onMessage.addListener(req => {
+    if(req.message === 'com.khafradev.urlUpdate') {
         addButton();
 
         // MutationObservers are still useless, what a surprise.
@@ -186,26 +188,25 @@ chrome.runtime.onMessage.addListener(request => {
 
                 bCC.appendChild(dupe);
 
-                dupe.addEventListener('click', () => {  
-                    browser.runtime.sendMessage({
-                        pw: true
-                    }).then(
-                        m => {
-                            if(m.password) {
-                                // yikes
-                                const _ = dupe.parentElement.parentElement.parentElement.parentElement.children[0].querySelector('div');
-                                try {
-                                    _.textContent = sjcl.decrypt(m.password, _.textContent);
-                                    _.style.border = '1px solid green';
-                                } catch(e) {
-                                    console.error(e);
-                                    _.style.border = '1px solid red';
-                                }
-                            }
-                        }, 
-                    );  
+                dupe.addEventListener('click', async e => {  
+                    const { password } = (await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r)));
+                
+                    if(password) {
+                        // yikes
+                        const _ = e.target.parentElement.parentElement.parentElement.parentElement.children[0].querySelector('div');
+                        try {
+                            _.textContent = sjcl.decrypt(password, _.textContent);
+                            _.style.border = '1px solid green';
+                        } catch(e) {
+                            console.error(e);
+                            _.style.border = '1px solid red';
+                        }
+                    }  
                 });
             }
         })
     }
 });
+
+// only needs to run once
+window.addEventListener('load', () => chrome.runtime.sendMessage({ pw: true }, r => console.log('Loaded password. ' + r.password)));

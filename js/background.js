@@ -9,14 +9,25 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 
 let password;
 
-browser.storage.onChanged.addListener((changes) => {
+chrome.storage.onChanged.addListener(changes => {
     if(changes['decryptPassword']) {
         password = changes['decryptPassword'].newValue;
     }
 })
   
-browser.runtime.onMessage.addListener((req, _, send) => {
+chrome.runtime.onMessage.addListener((req, _, send) => {
     if(req.pw === true) {
-        send({ password });
+        if(!password) {
+            // who said an async function wasn't allowed? ;)
+            new Promise(r => chrome.storage.local.get('decryptPassword', r))
+                .then(({ decryptPassword }) => {
+                    password = decryptPassword;
+                    return send({ password });
+                });
+
+            return true;
+        }
+
+        return send({ password });
     }
 });
