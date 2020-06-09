@@ -11,7 +11,7 @@ document.querySelector('form').addEventListener('submit', async e => {
         
         document.querySelector('span').textContent = 'Updated Password!';    
     } catch(e) {
-        document.querySelector('span').textContent = 'Error: ';
+        document.querySelector('span').textContent = 'Error: ' + e.toString();
     } 
 });
 

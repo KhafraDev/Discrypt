@@ -1,6 +1,3 @@
-let token;
-let Fingerprint;
-
 const SP = btoa({
     "os": navigator.oscpu.split(' ').shift(),
     "browser": navigator.appCodeName,
@@ -18,7 +15,8 @@ const SP = btoa({
 });
 
 /**
- * Add button to document body that will be used to encrypt/decrypt
+ * Add button to document body that will be used to encrypt message.
+ * Runs on URL change.
  */
 const addButton = () => {
     const buttonParent = document.querySelector('div[class*="buttons-"]:not([aria-label])');
@@ -40,99 +38,61 @@ const addButton = () => {
 }
 
 /**
- * Get Discord auth token
+ * Send a message to the current channel.
  */
-const getToken = () => {
-    const iframe = document.createElement('iframe');
-    document.head.append(iframe);
-    window.dispatchEvent(new Event('beforeunload'));
-    const pd = iframe.contentWindow.localStorage;
-    iframe.remove();
-
-    token = JSON.parse(pd.token);
-    if(pd.fingerprint) {
-        Fingerprint = JSON.parse(pd.fingerprint);
-    }
-}
-
 const sendMessage = async () => {
-    if(!token) {
-        getToken();
-    }
-
     const textElement = document.querySelector('span[data-slate-string="true"]');
+    const channelID = location.href.split('/').pop();
+
     if(!textElement) {
         return; // no text in element
-    }
-
-    if(!textElement.textContent.length) {
-        return; // if element contains blank characters, maybe (ie. spaces)?
-    }
-
-    const channelID = location.href.split('/').pop();
-    if(!channelID.split('').every(c => !isNaN(c))) {
+    } else if(!channelID.split('').every(c => !isNaN(c))) {
+        return;
+    } else if(!token || !fingerprint) {
+        alert('A token or fingerprint could not be found in localStorage, please refresh the page to try again!');
+        console.log(!token ? 'Token is undefined' : !fingerprint ? 'Fingerprint is undefined' : 'Neither are undefined.');
         return;
     }
 
     const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
 
     if(!password) {
-        alert('Please set a password!');
+        alert('Please set a password in the popup window for this extension!');
         return;
     }
 
-    fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
-        method: 'POST',
-        body: JSON.stringify({
-            "content": sjcl.encrypt(password, textElement.textContent, {
-                count: 2048,
-                ks: 256
+    try {
+        const res = await fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
+            method: 'POST',
+            body: JSON.stringify({
+                "content": sjcl.encrypt(password, textElement.textContent, {
+                    count: 2048,
+                    ks: 256
+                }),
+                "nonce": Snowflake(),
+                "tts": false
             }),
-            "nonce": Snowflake(),
-            "tts": false
-        }),
-        headers: {
-            'User-Agent': navigator.userAgent,
-            'Accept-Language': 'en-US',
-            'Content-Type': 'application/json',
-            'Authorization': token,
-            'X-Super-Properties': SP,
-            'X-Fingerprint': Fingerprint || await fingerprint()
-        }
-    }).then(r => {
-        if(r.status !== 200) {
-            alert('Received status ' + r.status + '! (' + r.statusText + ').');
+            headers: {
+                'User-Agent': navigator.userAgent,
+                'Accept-Language': 'en-US',
+                'Content-Type': 'application/json',
+                'Authorization': token,
+                'X-Super-Properties': SP,
+                'X-Fingerprint': fingerprint
+            }
+        });
+
+        if(res.status !== 200) {
+            alert('Received status ' + res.status + '! (' + res.statusText + ').');
         }
 
         textElement.removeAttribute('data-slate-string');
         textElement.setAttribute('data-slate-zero-width', 'z');
         textElement.setAttribute('data-slate-length', '0');
         textElement.textContent = '\ufeff' // zero width no-break space
-    });
-}
-
-const fingerprint = async () => {
-    if(Fingerprint) {
-        return Fingerprint;
+    } catch(e) {
+        console.error('Discrypt Error sending message!', e);
     }
-
-    const ContextProperties = btoa(JSON.stringify({ 
-        location: 'Login' 
-    }));
-
-    const res = await fetch('https://discord.com/api/v6/experiments', {
-        headers: {
-            'Accept': '*/*',
-            'Accept-Language': 'en-US',
-            'Content-Type': 'application/json',
-            'User-Agent': navigator.userAgent,
-            'X-Fingerprint': '',
-            'X-Context-Properties': ContextProperties
-        }
-    });
-
-    Fingerprint = (await res.json()).fingerprint;
-    return Fingerprint;
 }
 
 chrome.runtime.onMessage.addListener(req => {
@@ -147,15 +107,15 @@ chrome.runtime.onMessage.addListener(req => {
                 (e.target.children.length === 0 || e.target.childNodes[0].nodeName === '#text')
             ) {
                 /*** @type {HTMLElement} */
-                const bC = getParentLikeId(e.target, /messages-\d+/);
-                const bCC = bC ? bC.querySelector('div[class*="wrapper-"]') : null;
+                const bC = getParentLikeId(e.target, /messages-\d+/); // parent element to button container.
+                const bCC = bC ? bC.querySelector('div[class*="wrapper-"]') : null; // button container
 
                 if(!bC || !bCC) { 
-                    // buttonContainer doesn't exist
-                    // most likely would throw an error but w/e
+                    // buttonContainer doesn't exist or parent element doesn't
                     return;
                 } else if(bCC.children.length === 4) {
                     // if decrypt button is guaranteed to exist already
+                    // max children native is 3
                     return;
                 } else if(bCC.children.length === 3) {
                     // messages sent by yourself contain 3 buttons, so we check
@@ -220,5 +180,5 @@ const getParentLikeId = (e, id) => {
     }
 }
 
-// only needs to run once to propagate password
+// only needs to run once to propagate decrypt password on load
 window.addEventListener('load', () => chrome.runtime.sendMessage({ pw: true }, () => {}));

@@ -2,7 +2,7 @@
 
     "manifest_version": 2,
     "name": "Discrypt",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "Encrypt and Decrypt Discord messages.",
 
     "browser_action": {
@@ -27,7 +27,7 @@
         },
         {
             "matches": ["https://discord.com/*"],
-            "js": ["js/sjcl.min.js"],
+            "js": ["js/sjcl.min.js", "js/localStorage.js"],
             "run_at": "document_start"
         }
     ]

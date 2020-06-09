@@ -1,5 +1,6 @@
 # Discrypt
- Discord Encryption in the browser
+ Discord Encryption in the browser.
+ Open sourced and commented, uses multiple different aspects of WebExtensions.
 
 # Screenshots
 Encrypt button 
@@ -62,3 +63,7 @@ Failed to decrypt
 * Better method of getting certain elements that doesn't throw errors.
 * Stops password from being logged into console, after all Discord does some funky stuff with ``console``. 
 * Better encrypt icon, again. Feels *almost* native, just needs to be a bit bigger.
+
+## v1.0.4
+* Less hacky way of getting token and fingerprint. Gets it from localStorage on document start instead of attaching an iframe.
+* More comments!
