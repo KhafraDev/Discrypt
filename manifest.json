@@ -2,7 +2,7 @@
 
     "manifest_version": 2,
     "name": "Discrypt",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Encrypt and Decrypt Discord messages.",
 
     "browser_action": {
@@ -16,18 +16,18 @@
 
     "background": {
         "scripts": [
-            "js/background.js"
+            "js/discrypt_background.js"
         ]
     },
 
     "content_scripts": [
         {
             "matches": ["https://discord.com/*"],
-            "js": ["js/index.js", "js/Snowflake.js"]
+            "js": ["js/discrypt_index.js", "js/Snowflake.js"]
         },
         {
             "matches": ["https://discord.com/*"],
-            "js": ["js/sjcl.min.js", "js/localStorage.js"],
+            "js": ["js/sjcl.min.js", "js/discrypt_localStorage.js"],
             "run_at": "document_start"
         }
     ]

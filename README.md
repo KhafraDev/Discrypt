@@ -67,3 +67,12 @@ Failed to decrypt
 ## v1.0.4
 * Less hacky way of getting token and fingerprint. Gets it from localStorage on document start instead of attaching an iframe.
 * More comments!
+
+## v1.0.5
+* Fingerprint could sometimes be undefined in localStorage. Brings back the old method as a backup.
+* Fix "Could not establish connection. Receiving end does not exist," by checking the status.
+* Disallows encrypted messages over 2,000 characters to be sent; would cause a 401 BAD REQUEST.
+* Prefix files with ``discrypt_`` to not overlap with other extensions.
+* Make ``getPropertyLikeId`` more verbose; now works with any property (renamed to ``getPropertyLikeProp``).
+* Remove window.onload event listener and password caching in background script.
+* If a message is decrypted, press the decrypt button again to re-encrypt the contents!

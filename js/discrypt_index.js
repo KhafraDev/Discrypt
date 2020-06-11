@@ -1,17 +1,17 @@
 const SP = btoa({
-    "os": navigator.oscpu.split(' ').shift(),
-    "browser": navigator.appCodeName,
-    "device": "",
-    "browser_user_agent": navigator.userAgent,
-    "browser_version": "76.0",
-    "os_version": "10",
-    "referrer": "",
-    "referring_domain": "",
-    "referrer_current": "",
-    "referring_domain_current": "",
-    "release_channel": "stable",
-    "client_build_number": 61181,
-    "client_event_source": null
+    'os': navigator.oscpu.split(' ').shift(),
+    'browser': navigator.appCodeName,
+    'device': '',
+    'browser_user_agent': navigator.userAgent,
+    'browser_version': navigator.userAgent.match(/(Chrome|Firefox)\/(\d+)/).pop(),
+    'os_version': '10',
+    'referrer': '',
+    'referring_domain': '',
+    'referrer_current': '',
+    'referring_domain_current': '',
+    'release_channel': 'stable',
+    'client_build_number': Math.floor(Math.random() * (99999 - 50000 + 1) + 50000),
+    'client_event_source': null
 });
 
 /**
@@ -62,19 +62,27 @@ const sendMessage = async () => {
     }
 
     try {
+        const body = JSON.stringify({
+            content: sjcl.encrypt(password, textElement.textContent, {
+                count: 2048,
+                ks: 256
+            }),
+            nonce: Snowflake(),
+            tts: false
+        });
+
+        if(body.length > 2000) {
+            alert('Message length: ' + body.length + '/2000.');
+            return;
+        }
+
         const res = await fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
             method: 'POST',
-            body: JSON.stringify({
-                "content": sjcl.encrypt(password, textElement.textContent, {
-                    count: 2048,
-                    ks: 256
-                }),
-                "nonce": Snowflake(),
-                "tts": false
-            }),
+            body: body,
             headers: {
+                'Host': location.host,
                 'User-Agent': navigator.userAgent,
-                'Accept-Language': 'en-US',
+                'Accept-Language': navigator.language,
                 'Content-Type': 'application/json',
                 'Authorization': token,
                 'X-Super-Properties': SP,
@@ -107,7 +115,7 @@ chrome.runtime.onMessage.addListener(req => {
                 (e.target.children.length === 0 || e.target.childNodes[0].nodeName === '#text')
             ) {
                 /*** @type {HTMLElement} */
-                const bC = getParentLikeId(e.target, /messages-\d+/); // parent element to button container.
+                const bC = getParentLikeProp(e.target, 'id', /messages-\d+/); // parent element to button container.
                 const bCC = bC ? bC.querySelector('div[class*="wrapper-"]') : null; // button container
 
                 if(!bC || !bCC) { 
@@ -148,6 +156,13 @@ chrome.runtime.onMessage.addListener(req => {
                         const _ = bC.querySelector('div[class*="messageContent-"]');
                         if(!_) {
                             return; 
+                        } else if(_.style.border === '1px solid green') {
+                            _.textContent = sjcl.encrypt(password, _.textContent, {
+                                count: 2048,
+                                ks: 256
+                            });
+                            _.style.border = '0px';
+                            return;
                         }
 
                         try {
@@ -164,21 +179,18 @@ chrome.runtime.onMessage.addListener(req => {
 });
 
 /**
- * Get a (grand-grand-nth)parent element that matches id.
+ * Get a (grand-grand-nth)parent element that matches property.
  * @example
- *  const element = getParentLikeId(document.querySelector('.child'), 'message-'); // HTMLElement
- *  const element = getParentLikeId(document.querySelector('.child'), 'non-existent'); // undefined
+ *  const element = getParentLikeProp(document.querySelector('.child'), 'id', 'message-'); // HTMLElement
+ *  const element = getParentLikeProp(document.querySelector('.child'), 'class', 'non-existent'); // undefined
  * @param {HTMLElement} e element
  * @param {string|RegExp} id element ID to get
  * @returns {HTMLElement} parent element
  */
-const getParentLikeId = (e, id) => {
+const getParentLikeProp = (e, prop, t) => {
     while(e = e.parentElement) {
-        if(e.id.match(id)) {
+        if(prop in e && e[prop].match(t)) {
             return e;
         }
     }
 }
-
-// only needs to run once to propagate decrypt password on load
-window.addEventListener('load', () => chrome.runtime.sendMessage({ pw: true }, () => {}));
