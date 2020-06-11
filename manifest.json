@@ -7,7 +7,8 @@
 
     "browser_action": {
         "default_popup": "popup/index.html",
-        "default_title": "Discrypt"
+        "default_title": "Discrypt",
+        "default_icon": "assets/icon.svg"
     },
 
     "permissions": [
