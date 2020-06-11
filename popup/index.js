@@ -19,7 +19,7 @@ document.getElementById('gp').addEventListener('click', async () => {
     const span = document.querySelector('span');
     try {
         const { decryptPassword } = await new Promise(r => chrome.storage.local.get('decryptPassword', r));
-        span.textContent = 'Your current password is: "' + decryptPassword + '"';
+        span.textContent = decryptPassword ? 'Your current password is: "' + decryptPassword + '"!' : 'No password set!';
     } catch(e)  {
         span.textContent = e.toString();
     }

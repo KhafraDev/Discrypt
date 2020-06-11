@@ -2,7 +2,7 @@
 
     "manifest_version": 2,
     "name": "Discrypt",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "Encrypt and Decrypt Discord messages.",
 
     "browser_action": {

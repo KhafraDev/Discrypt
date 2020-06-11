@@ -1,3 +1,4 @@
+/*** Discord custom header `X-Super-Properties` */
 const SP = btoa({
     'os': navigator.oscpu.split(' ').shift(),
     'browser': navigator.appCodeName,
@@ -104,16 +105,11 @@ const sendMessage = async () => {
 }
 
 chrome.runtime.onMessage.addListener(req => {
-    if(req.message === 'com.khafradev.urlUpdate') {
+    if(req.message === 'discryptURLUpdate') {
         addButton();
 
-        // MutationObservers are still useless, what a surprise.
-        // something that could have been useful...
-
         document.addEventListener('mouseover', e => {
-            if( e.target.tagName === 'DIV' && 
-                (e.target.children.length === 0 || e.target.childNodes[0].nodeName === '#text')
-            ) {
+            if(/markup-(.*) messageContent-(.*)/.test(e.target.className)) {
                 /*** @type {HTMLElement} */
                 const bC = getParentLikeProp(e.target, 'id', /messages-\d+/); // parent element to button container.
                 const bCC = bC ? bC.querySelector('div[class*="wrapper-"]') : null; // button container
@@ -121,19 +117,13 @@ chrome.runtime.onMessage.addListener(req => {
                 if(!bC || !bCC) { 
                     // buttonContainer doesn't exist or parent element doesn't
                     return;
-                } else if(bCC.children.length === 4) {
-                    // if decrypt button is guaranteed to exist already
-                    // max children native is 3
-                    return;
-                } else if(bCC.children.length === 3) {
-                    // messages sent by yourself contain 3 buttons, so we check
-                    // if one of those buttons is a Discrypt button.
-                    if(bCC.children[bCC.children.length - 1].id === 'discrypt') {
-                        return;
-                    }
                 } else if(bCC.className.indexOf('wrapper-') === -1 || bCC.tagName !== 'DIV') {
                     // so we don't choose incorrect elements
                     // ie. path(s) from experience...
+                    return;
+                } else if(bCC.children.length === 0 || bCC.children[bCC.children.length - 1].id === 'discrypt') {
+                    // always check last child (if one exists) to see if the decrypt element already exists
+                    // there are cases where there are 1-3 children.
                     return;
                 }
 

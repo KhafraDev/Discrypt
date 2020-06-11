@@ -76,3 +76,7 @@ Failed to decrypt
 * Make ``getPropertyLikeId`` more verbose; now works with any property (renamed to ``getPropertyLikeProp``).
 * Remove window.onload event listener and password caching in background script.
 * If a message is decrypted, press the decrypt button again to re-encrypt the contents!
+
+## v1.0.6
+* Fix a bug where the encrypt button could be added multiple times to messages that the user doesn't have access to react/edit.
+* Better detection for adding the decrypt button, removes all false positives (false positives never caused issues because they were detected later).
