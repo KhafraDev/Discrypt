@@ -1,5 +1,5 @@
 const getFingerprint = async () => {
-    console.error('Discrypt: No fingerprint found! Getting one now.');
+    console.warn('Discrypt: No fingerprint found! Getting one now.');
     const ContextProperties = btoa(JSON.stringify({ 
         location: 'Login' 
     }));

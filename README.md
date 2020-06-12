@@ -33,11 +33,13 @@ Failed to decrypt
 * SJCL (https://github.com/bitwiseshiftleft/sjcl/blob/master/LICENSE.txt)
 * Bootstrap SVGs (https://github.com/twbs/icons/blob/master/LICENSE.md)
 
+# WIP
+* More encryption options, possible OpenPGP implementation.
+
 # Known bugs
 1. On startup you have to go to a different channel/server before buttons are added. Not really a bug since it's caused by the way I handle adding buttons.
-2. Emojis are completely removed from the text.
-3. Might not work on Chrome/Edge/Opera. Chrome support is likely, but it'll never be tested anywhere other than Firefox.
-4. Popup looks bad because I dislike HTML and CSS very much.
+2. Might not work on Chrome/Edge/Opera. Chrome support is likely, but it'll never be tested anywhere other than Firefox.
+3. Popup looks bad because I dislike HTML and CSS very much.
 
 # Changelog
 ## v1.0.0
@@ -80,3 +82,8 @@ Failed to decrypt
 ## v1.0.6
 * Fix a bug where the encrypt button could be added multiple times to messages that the user doesn't have access to react/edit.
 * Better detection for adding the decrypt button, removes all false positives (false positives never caused issues because they were detected later).
+
+## v1.0.7
+* Use MutationObserver to detect when new messages are scrolled into view or new messages are received. 
+* Add decrypt buttons to all elements at once, instead of using a mouseover event.
+* Fix decrypt buttons not being added to some messages (images, styled text, emojis), even though they couldn't be decrypted anyways. 

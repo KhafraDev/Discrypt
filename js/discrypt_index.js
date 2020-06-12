@@ -21,7 +21,10 @@ const SP = btoa({
  */
 const addButton = () => {
     const buttonParent = document.querySelector('div[class*="buttons-"]:not([aria-label])');
-    if(!buttonParent || buttonParent.children.length === 4) {
+    // in channels where a user doesn't have permission to type, there are no children
+    // Fixes "Unchecked lastError value: Error: buttonParent.children[0] is undefined"
+    // that would throw an error in the background script and give some default error message.
+    if(!buttonParent || buttonParent.children.length === 4 || buttonParent.children.length === 0) {
         return;
     }
 
@@ -38,6 +41,43 @@ const addButton = () => {
     buttonChild.addEventListener('click', sendMessage);
 }
 
+const addDecrypt = bC => {
+    for(const el of Array.from(bC)) {
+        const dupe = el.children[0].cloneNode(true);
+        dupe.setAttribute('aria-label', 'discrypt');
+        dupe.setAttribute('id', 'discrypt');
+        dupe.innerHTML = `
+        <svg class="bi bi-check-square-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm10.03 4.97a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+        </svg>
+        `;
+
+        el.appendChild(dupe);
+        dupe.addEventListener('click', async ({ target }) => {
+            const message = getParentLikeProp(target, 'id', 'messages-');
+            const m = message.querySelector('div[class*="messageContent-"]');
+            if(m.style.border === '1px solid green') {
+                return;
+            }
+
+            const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
+            if(!password) {
+                return;
+            }
+            
+            try {
+                m.textContent = sjcl.decrypt(password, m.textContent, {
+                    count: 2048,
+                    ks: 256
+                });
+                m.style.border = '1px solid green';
+            } catch {
+                m.style.border = '1px solid red';
+            }
+        });
+    }
+}
+
 /**
  * Send a message to the current channel.
  */
@@ -50,8 +90,7 @@ const sendMessage = async () => {
     } else if(!channelID.split('').every(c => !isNaN(c))) {
         return;
     } else if(!token || !fingerprint) {
-        alert('A token or fingerprint could not be found in localStorage, please refresh the page to try again!');
-        console.log(!token ? 'Token is undefined' : !fingerprint ? 'Fingerprint is undefined' : 'Neither are undefined.');
+        console.warn('[Discrypt]', !token ? 'Token is undefined' : !fingerprint ? 'Fingerprint is undefined' : 'Neither are undefined.');
         return;
     }
 
@@ -62,108 +101,89 @@ const sendMessage = async () => {
         return;
     }
 
-    try {
-        const body = JSON.stringify({
-            content: sjcl.encrypt(password, textElement.textContent, {
-                count: 2048,
-                ks: 256
-            }),
-            nonce: Snowflake(),
-            tts: false
-        });
+    const body = JSON.stringify({
+        content: sjcl.encrypt(password, textElement.textContent, {
+            count: 2048,
+            ks: 256
+        }),
+        nonce: Snowflake(),
+        tts: false
+    });
 
-        if(body.length > 2000) {
-            alert('Message length: ' + body.length + '/2000.');
-            return;
-        }
-
-        const res = await fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
-            method: 'POST',
-            body: body,
-            headers: {
-                'Host': location.host,
-                'User-Agent': navigator.userAgent,
-                'Accept-Language': navigator.language,
-                'Content-Type': 'application/json',
-                'Authorization': token,
-                'X-Super-Properties': SP,
-                'X-Fingerprint': fingerprint
-            }
-        });
-
-        if(res.status !== 200) {
-            alert('Received status ' + res.status + '! (' + res.statusText + ').');
-        }
-
-        textElement.removeAttribute('data-slate-string');
-        textElement.setAttribute('data-slate-zero-width', 'z');
-        textElement.setAttribute('data-slate-length', '0');
-        textElement.textContent = '\ufeff' // zero width no-break space
-    } catch(e) {
-        console.error('Discrypt Error sending message!', e);
+    if(body.length > 2000) {
+        alert('Message length: ' + body.length + '/2000.');
+        return;
     }
+
+    const res = await fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
+        method: 'POST',
+        body: body,
+        headers: {
+            'Host': location.host,
+            'User-Agent': navigator.userAgent,
+            'Accept-Language': navigator.language,
+            'Content-Type': 'application/json',
+            'Authorization': token,
+            'X-Super-Properties': SP,
+            'X-Fingerprint': fingerprint
+        }
+    });
+
+    if(res.status !== 200) {
+        alert('Received status ' + res.status + '! (' + res.statusText + ').');
+    }
+
+    textElement.removeAttribute('data-slate-string');
+    textElement.setAttribute('data-slate-zero-width', 'z');
+    textElement.setAttribute('data-slate-length', '0');
+    textElement.textContent = '\ufeff' // zero width no-break space
 }
+
+/**
+ * Handle mutations when nodes are added.
+ * @param {*} Mutations 
+ */
+const MutationCallback = Mutations => {
+    for(const m of Mutations) {
+        if( m.type === 'childList'  &&
+            m.addedNodes.length &&
+            m.addedNodes[0].className.match(/buttonContainer-(.*)/)
+        ) {
+            /**
+             * parent element to button container
+             * @type {HTMLElement}
+             */
+            const bCP = m.target.id.match(/messages-(\d+)/) ? m.target : getParentLikeProp(m.addedNodes[0], 'id', /messages-(\d+)/);
+            const bC = bCP ? bCP.querySelector('div[class*="buttons-"] > div[class*="wrapper-"]') : null;
+
+            if(!bC) {
+                return;
+            } else if(bC.className.indexOf('wrapperPaused-') !== -1) {
+                // some elements contain wrapper- classes but aren't text like
+                // images and possibly formatted text, should be handled already
+                // but this is a precaution.
+                return;
+            } else if(bC.children[bC.children.length - 1].id === 'discrypt') {
+                // decrypt button already exists
+                // another precaution since it shouldn't occur
+                return;
+            }
+            
+            addDecrypt([bC]);
+        }
+    }
+};
 
 chrome.runtime.onMessage.addListener(req => {
     if(req.message === 'discryptURLUpdate') {
         addButton();
+        addDecrypt(document.querySelectorAll('div[class*="buttons-"] > div[class*="wrapper-"]'));
 
-        document.addEventListener('mouseover', e => {
-            if(/markup-(.*) messageContent-(.*)/.test(e.target.className)) {
-                /*** @type {HTMLElement} */
-                const bC = getParentLikeProp(e.target, 'id', /messages-\d+/); // parent element to button container.
-                const bCC = bC ? bC.querySelector('div[class*="wrapper-"]') : null; // button container
+        const observer = new MutationObserver(MutationCallback);
 
-                if(!bC || !bCC) { 
-                    // buttonContainer doesn't exist or parent element doesn't
-                    return;
-                } else if(bCC.className.indexOf('wrapper-') === -1 || bCC.tagName !== 'DIV') {
-                    // so we don't choose incorrect elements
-                    // ie. path(s) from experience...
-                    return;
-                } else if(bCC.children.length === 0 || bCC.children[bCC.children.length - 1].id === 'discrypt') {
-                    // always check last child (if one exists) to see if the decrypt element already exists
-                    // there are cases where there are 1-3 children.
-                    return;
-                }
-
-                // clone the element, so we don't modify the OG
-                const dupe = bCC.children[0].cloneNode(true);
-                dupe.setAttribute('aria-label', 'discrypt');
-                dupe.setAttribute('id', 'discrypt');
-                dupe.innerHTML = `
-                <svg class="bi bi-check-square-fill" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm10.03 4.97a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
-                </svg>
-                `;
-
-                bCC.appendChild(dupe);
-
-                dupe.addEventListener('click', async () => {  
-                    const { password } = (await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r)));
-
-                    if(password) {
-                        const _ = bC.querySelector('div[class*="messageContent-"]');
-                        if(!_) {
-                            return; 
-                        } else if(_.style.border === '1px solid green') {
-                            _.textContent = sjcl.encrypt(password, _.textContent, {
-                                count: 2048,
-                                ks: 256
-                            });
-                            _.style.border = '0px';
-                            return;
-                        }
-
-                        try {
-                            _.textContent = sjcl.decrypt(password, _.textContent);
-                            _.style.border = '1px solid green';
-                        } catch(e) {
-                            _.style.border = '1px solid red';
-                        }
-                    }  
-                });
-            }
+        observer.observe(document.getElementById('messages') /* container for message list */, {
+            childList: true,
+            subtree: true
         });
     }
 });
