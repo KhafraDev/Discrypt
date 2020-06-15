@@ -1,6 +1,6 @@
 {
   "name": "discrypt",
-  "version": "1.0.7",
+  "version": "1.0.7-1",
   "description": "Encrypt Discord messages in the browser.",
   "main": "manifest.json",
   "scripts": {
@@ -20,5 +20,6 @@
   "bugs": {
     "url": "https://github.com/khafradev/discrypt/issues"
   },
-  "homepage": "https://github.com/khafradev/discrypt#readme"
+  "homepage": "https://github.com/khafradev/discrypt#readme",
+  "dependencies": {}
 }

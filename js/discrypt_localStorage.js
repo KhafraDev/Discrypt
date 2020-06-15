@@ -4,7 +4,7 @@ const getFingerprint = async () => {
         location: 'Login' 
     }));
     
-    const res = await fetch('https://discordapp.com/api/v6/experiments', {
+    const res = await fetch('https://discord.com/api/v6/experiments', {
         headers: {
             'Accept': '*/*',
             'Accept-Language': navigator.language,
@@ -33,4 +33,4 @@ const ls = window.localStorage;
 const token = JSON.parse(ls.token);
 /*** @type {string} 
  * * @description Discord fingerprint */
-const fingerprint = ls.fingerprint ? JSON.parse(ls.fingerprint) : getFingerprint().then(r => r);
+const fingerprint = ls.fingerprint || getFingerprint().then(r => r);

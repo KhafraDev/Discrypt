@@ -56,7 +56,10 @@ const addDecrypt = bC => {
         dupe.addEventListener('click', async ({ target }) => {
             const message = getParentLikeProp(target, 'id', 'messages-');
             const m = message.querySelector('div[class*="messageContent-"]');
-            if(m.style.border === '1px solid green') {
+            if(!m || m.style.border === '1px solid green') {
+                m.textContent = m.getAttribute('discrypt');
+                m.removeAttribute('discrypt');
+                m.style.border = '0px';
                 return;
             }
 
@@ -65,7 +68,8 @@ const addDecrypt = bC => {
                 return;
             }
             
-            try {
+            try { // bad password will throw an error
+                m.setAttribute('discrypt', m.textContent);
                 m.textContent = sjcl.decrypt(password, m.textContent, {
                     count: 2048,
                     ks: 256
@@ -83,11 +87,11 @@ const addDecrypt = bC => {
  */
 const sendMessage = async () => {
     const textElement = document.querySelector('span[data-slate-string="true"]');
-    const channelID = location.href.split('/').pop();
+    const [, channelID] = location.pathname.match(/\/channels\/\d+\/(\d+)/);
 
     if(!textElement) {
         return; // no text in element
-    } else if(!channelID.split('').every(c => !isNaN(c))) {
+    } else if(isNaN(channelID)) {
         return;
     } else if(!token || !fingerprint) {
         console.warn('[Discrypt]', !token ? 'Token is undefined' : !fingerprint ? 'Fingerprint is undefined' : 'Neither are undefined.');
@@ -95,7 +99,6 @@ const sendMessage = async () => {
     }
 
     const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
-
     if(!password) {
         alert('Please set a password in the popup window for this extension!');
         return;
@@ -132,28 +135,23 @@ const sendMessage = async () => {
     if(res.status !== 200) {
         alert('Received status ' + res.status + '! (' + res.statusText + ').');
     }
-
-    textElement.removeAttribute('data-slate-string');
-    textElement.setAttribute('data-slate-zero-width', 'z');
-    textElement.setAttribute('data-slate-length', '0');
-    textElement.textContent = '\ufeff' // zero width no-break space
 }
 
 /**
  * Handle mutations when nodes are added.
- * @param {*} Mutations 
+ * @param {Iterable} Mutations 
  */
 const MutationCallback = Mutations => {
     for(const m of Mutations) {
         if( m.type === 'childList'  &&
             m.addedNodes.length &&
-            m.addedNodes[0].className.match(/buttonContainer-(.*)/)
+            m.addedNodes[0].className.search(/buttonContainer-(.*)/) > -1
         ) {
             /**
              * parent element to button container
              * @type {HTMLElement}
              */
-            const bCP = m.target.id.match(/messages-(\d+)/) ? m.target : getParentLikeProp(m.addedNodes[0], 'id', /messages-(\d+)/);
+            const bCP = m.target.id.indexOf('messages-') > -1 ? m.target : getParentLikeProp(m.addedNodes[0], 'id', /messages-(\d+)/);
             const bC = bCP ? bCP.querySelector('div[class*="buttons-"] > div[class*="wrapper-"]') : null;
 
             if(!bC) {
@@ -179,27 +177,33 @@ chrome.runtime.onMessage.addListener(req => {
         addButton();
         addDecrypt(document.querySelectorAll('div[class*="buttons-"] > div[class*="wrapper-"]'));
 
-        const observer = new MutationObserver(MutationCallback);
-
-        observer.observe(document.getElementById('messages') /* container for message list */, {
-            childList: true,
-            subtree: true
-        });
+        /** container for message list */
+        const messagesContainer = document.getElementById('messages');
+        if(messagesContainer instanceof HTMLElement) {
+            const observer = new MutationObserver(MutationCallback);
+            
+            observer.observe(messagesContainer, {
+                childList: true,
+                subtree: true
+            });
+        }
     }
 });
 
 /**
  * Get a (grand-grand-nth)parent element that matches property.
  * @example
- *  const element = getParentLikeProp(document.querySelector('.child'), 'id', 'message-'); // HTMLElement
- *  const element = getParentLikeProp(document.querySelector('.child'), 'class', 'non-existent'); // undefined
+ *  const element = getParentLikeProp(document.querySelector('.child'), 'id', 'message-');
+ *  const element = getParentLikeProp(document.querySelector('.child'), 'id', /message-\d+/);
  * @param {HTMLElement} e element
- * @param {string|RegExp} id element ID to get
+ * @param {string} prop Property
+ * @param {string|RegExp} t text to match
+ * @see https://jsperf.com/exec-vs-match-vs-test-vs-search/5
  * @returns {HTMLElement} parent element
  */
 const getParentLikeProp = (e, prop, t) => {
     while(e = e.parentElement) {
-        if(prop in e && e[prop].match(t)) {
+        if(prop in e && e[prop].search(t) > -1) {
             return e;
         }
     }

@@ -83,7 +83,12 @@ Failed to decrypt
 * Fix a bug where the encrypt button could be added multiple times to messages that the user doesn't have access to react/edit.
 * Better detection for adding the decrypt button, removes all false positives (false positives never caused issues because they were detected later).
 
-## v1.0.7
+## v1.0.7 (v1.0.7-1)
 * Use MutationObserver to detect when new messages are scrolled into view or new messages are received. 
 * Add decrypt buttons to all elements at once, instead of using a mouseover event.
 * Fix decrypt buttons not being added to some messages (images, styled text, emojis), even though they couldn't be decrypted anyways. 
+* Press the decrypt button to "re-encrypt" the message if it's decrypted. This sets the text back to its original state instead of modifying it!
+* Replace `String.match` with `String.search` in some cases due to bad performance in Firefox (JSPERF: 50% slower -> 3% slower compared to indexOf).
+* Better method of getting the current channel ID.
+* Remove "clearing" the box after sending a message since it didn't work.
+* Fingerprints stored in localStorage don't need to be parsed, and would throw an error if they were.
