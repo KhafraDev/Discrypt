@@ -56,16 +56,42 @@ const addDecrypt = bC => {
         dupe.addEventListener('click', async ({ target }) => {
             const message = getParentLikeProp(target, 'id', 'messages-');
             const m = message.querySelector('div[class*="messageContent-"]');
-            if(!m || m.style.border === '1px solid green') {
-                m.textContent = m.getAttribute('discrypt');
-                m.removeAttribute('discrypt');
-                m.style.border = '0px';
-                return;
-            }
-
             const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
+
             if(!password) {
                 return;
+            } else if(['1px solid green', '1px solid aquamarine'].includes(m.style.border)) {
+                m.textContent = m.getAttribute('discrypt').length <= 2000 ? m.getAttribute('discrypt') : '';
+                m.style.border = '0px';
+                return;
+            } else if(!m.textContent.length) {
+                const file = message.querySelector('div[class*="attachment-"] a');
+                const href = file.getAttribute('href') ?? file.href;
+                if(
+                    !file || 
+                    !href || 
+                    !href.endsWith('.txt') ||
+                    href.indexOf('https://cdn.discordapp.com/') !== 0
+                ) {
+                    return;
+                }
+
+                const res = await fetch(file.href);
+                const t = await res.text(); // contents of file
+
+                try {
+                    m.setAttribute('discrypt', t);
+                    m.textContent = sjcl.decrypt(password, t, {
+                        count: 2048,
+                        ks: 256
+                    });
+                    m.style.visibility = 'visible';
+                    m.style.border = '1px solid aquamarine';
+                } catch {
+                    m.style.visibility = 'hidden';
+                } finally {
+                    return;
+                }
             }
             
             try { // bad password will throw an error
@@ -86,15 +112,15 @@ const addDecrypt = bC => {
  * Send a message to the current channel.
  */
 const sendMessage = async () => {
-    const textElement = document.querySelector('span[data-slate-string="true"]');
+    const textElements = document.querySelectorAll('span[data-slate-string="true"]');
     const [, channelID] = location.pathname.match(/\/channels\/\d+\/(\d+)/);
 
-    if(!textElement) {
+    if(textElements.length === 0) {
         return; // no text in element
     } else if(isNaN(channelID)) {
         return;
     } else if(!token || !fingerprint) {
-        console.warn('[Discrypt]', !token ? 'Token is undefined' : !fingerprint ? 'Fingerprint is undefined' : 'Neither are undefined.');
+        console.warn('[Discrypt]: ' + (!token ? 'Token is undefined' : !fingerprint ? 'Fingerprint is undefined' : 'Neither are undefined.'));
         return;
     }
 
@@ -104,35 +130,45 @@ const sendMessage = async () => {
         return;
     }
 
-    const body = JSON.stringify({
-        content: sjcl.encrypt(password, textElement.textContent, {
-            count: 2048,
-            ks: 256
-        }),
-        nonce: Snowflake(),
-        tts: false
-    });
-
-    if(body.length > 2000) {
-        alert('Message length: ' + body.length + '/2000.');
-        return;
-    }
-
-    const res = await fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', {
+    const options = {
         method: 'POST',
-        body: body,
         headers: {
             'Host': location.host,
             'User-Agent': navigator.userAgent,
             'Accept-Language': navigator.language,
-            'Content-Type': 'application/json',
             'Authorization': token,
             'X-Super-Properties': SP,
             'X-Fingerprint': fingerprint
         }
+    };
+
+    const message = [...textElements].map(e => e.textContent).join('\n');
+    const enc = sjcl.encrypt(password, message, {
+        count: 2048,
+        ks: 256
     });
 
-    if(res.status !== 200) {
+    if(enc.length <= 2000) {
+        options.body = JSON.stringify({
+            content: enc,
+            nonce: Snowflake(),
+            tts: false
+        });
+        options.headers['Content-Type'] = 'application/json'; // required
+    } else {
+        const formData = new FormData();
+        formData.append('tts', false);
+        formData.append('content', '');
+        formData.append('file', new Blob([enc], { type: 'text/plain'}), 'discryptUpload.txt');
+
+        // sending a Content-Type header causes the response to fail.
+        // FormData should automatically set it.
+        options.body = formData;
+    }
+
+    const res = await fetch('https://discord.com/api/v6/channels/' + channelID + '/messages', options);
+
+    if(!res.ok) {
         alert('Received status ' + res.status + '! (' + res.statusText + ').');
     }
 }
@@ -143,9 +179,8 @@ const sendMessage = async () => {
  */
 const MutationCallback = Mutations => {
     for(const m of Mutations) {
-        if( m.type === 'childList'  &&
-            m.addedNodes.length &&
-            m.addedNodes[0].className.search(/buttonContainer-(.*)/) > -1
+        if( m.type === 'childList' &&
+            m.addedNodes[0]?.className?.search(/buttonContainer-(.*)/) > -1
         ) {
             /**
              * parent element to button container

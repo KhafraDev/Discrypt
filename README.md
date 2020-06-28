@@ -92,3 +92,11 @@ Failed to decrypt
 * Better method of getting the current channel ID.
 * Remove "clearing" the box after sending a message since it didn't work.
 * Fingerprints stored in localStorage don't need to be parsed, and would throw an error if they were.
+
+## v1.0.8
+* Fix multi-lined messages only sending the first line.
+* Get actual message length, not payload length.
+* If a message is longer than 2,000 characters (Discord's max message limit) a new file will be uploaded automatically instead with the full content.
+* Download and decrypt text from .txt files that are hosted on Discord (cdn.discordapp.com). Requires `https://cdn.discordapp.com/*` permission.
+* Don't remove discrypt attributes from elements since there's no point in doing so. 
+* Set minimum FireFox version to 74, as I use optional chaining and other syntax not valid in older versions.
