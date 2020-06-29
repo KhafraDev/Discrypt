@@ -1,6 +1,6 @@
 {
   "name": "discrypt",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Encrypt Discord messages in the browser.",
   "main": "manifest.json",
   "scripts": {

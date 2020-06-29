@@ -33,13 +33,13 @@ Failed to decrypt
 * SJCL (https://github.com/bitwiseshiftleft/sjcl/blob/master/LICENSE.txt)
 * Bootstrap SVGs (https://github.com/twbs/icons/blob/master/LICENSE.md)
 
-# WIP
-* More encryption options, possible OpenPGP implementation.
-
 # Known bugs
 1. On startup you have to go to a different channel/server before buttons are added. Not really a bug since it's caused by the way I handle adding buttons.
-2. Might not work on Chrome/Edge/Opera. Chrome support is likely, but it'll never be tested anywhere other than Firefox.
-3. Popup looks bad because I dislike HTML and CSS very much.
+2. Popup looks bad because I dislike HTML and CSS very much.
+3. Chrome/Brave/Chromium: ```
+    Error handling response: TypeError: #<Window> is not a constructor
+    at resolve (<anonymous>)
+    ```
 
 # Changelog
 ## v1.0.0
@@ -100,3 +100,6 @@ Failed to decrypt
 * Download and decrypt text from .txt files that are hosted on Discord (cdn.discordapp.com). Requires `https://cdn.discordapp.com/*` permission.
 * Don't remove discrypt attributes from elements since there's no point in doing so. 
 * Set minimum FireFox version to 74, as I use optional chaining and other syntax not valid in older versions.
+
+## v1.0.9
+* Mostly add Chrome support (throws error that's impossible to debug on URL change but it completely works).

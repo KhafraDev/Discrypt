@@ -1,6 +1,6 @@
 /*** Discord custom header `X-Super-Properties` */
 const SP = btoa({
-    'os': navigator.oscpu.split(' ').shift(),
+    'os': navigator.platform,
     'browser': navigator.appCodeName,
     'device': '',
     'browser_user_agent': navigator.userAgent,
@@ -14,6 +14,18 @@ const SP = btoa({
     'client_build_number': Math.floor(Math.random() * (99999 - 50000 + 1) + 50000),
     'client_event_source': null
 });
+
+/**
+ * @returns {Promise<string>}
+ */
+const getPassword = () => {
+    return new Promise(r => {
+        chrome.runtime.sendMessage(
+            { pw: true }, 
+            r
+        );
+    });
+}
 
 /**
  * Add button to document body that will be used to encrypt message.
@@ -56,7 +68,7 @@ const addDecrypt = bC => {
         dupe.addEventListener('click', async ({ target }) => {
             const message = getParentLikeProp(target, 'id', 'messages-');
             const m = message.querySelector('div[class*="messageContent-"]');
-            const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
+            const { password } = await getPassword();
 
             if(!password) {
                 return;
@@ -124,7 +136,7 @@ const sendMessage = async () => {
         return;
     }
 
-    const { password } = await new Promise(r => chrome.runtime.sendMessage({ pw: true }, r));
+    const { password } = await getPassword();
     if(!password) {
         alert('Please set a password in the popup window for this extension!');
         return;
@@ -207,7 +219,7 @@ const MutationCallback = Mutations => {
     }
 };
 
-chrome.runtime.onMessage.addListener(req => {
+chrome.runtime.onMessage.addListener((req, _, send) => {
     if(req.message === 'discryptURLUpdate') {
         addButton();
         addDecrypt(document.querySelectorAll('div[class*="buttons-"] > div[class*="wrapper-"]'));
@@ -223,6 +235,10 @@ chrome.runtime.onMessage.addListener(req => {
             });
         }
     }
+
+    // Chrome will throw an error without a return value
+    send({});
+    return true;
 });
 
 /**
