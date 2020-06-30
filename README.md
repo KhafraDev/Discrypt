@@ -101,5 +101,7 @@ Failed to decrypt
 * Don't remove discrypt attributes from elements since there's no point in doing so. 
 * Set minimum FireFox version to 74, as I use optional chaining and other syntax not valid in older versions.
 
-## v1.0.9
+## v1.0.9~beta2
 * Mostly add Chrome support (throws error that's impossible to debug on URL change but it completely works).
+* Organization.
+* Polished the popup.

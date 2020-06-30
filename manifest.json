@@ -23,18 +23,18 @@
 
     "background": {
         "scripts": [
-            "js/discrypt_background.js"
+            "js/back/discrypt_background.js"
         ]
     },
 
     "content_scripts": [
         {
             "matches": ["https://discord.com/*"],
-            "js": ["js/discrypt_index.js", "js/lib/Snowflake.js"]
+            "js": ["js/front/discrypt_helpers.js", "js/front/discrypt_dom.js", "js/front/discrypt_index.js", "js/lib/Snowflake.js"]
         },
         {
             "matches": ["https://discord.com/*"],
-            "js": ["js/lib/sjcl.min.js", "js/discrypt_localStorage.js"],
+            "js": ["js/lib/sjcl.min.js", "js/front/discrypt_beforeload.js"],
             "run_at": "document_start"
         }
     ]

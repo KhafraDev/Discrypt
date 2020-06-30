@@ -1,3 +1,49 @@
-.passwordInput > * {
-    display: inline-block;
+.password-update {
+    border-radius: 13px;
+    padding: 10px;
+    background-color: #C1CECE;
+}
+
+body {
+    background-color: darkslategray;
+}
+
+header div img {
+    width: 20px;
+    height: 20px;
+}
+
+header div {
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    padding: 4px;
+    align-items:center;
+    justify-content:center;
+}
+
+label[for="header"] {
+    padding-left: 5px;
+    color: #C1CECE;
+    font: italic bold 12px/30px Arial;
+}
+
+button {
+    border: none;
+    background-color: inherit;
+}
+
+button::-moz-focus-inner {
+    border: 0;
+}
+
+.log-holder {
+    background-color: black;
+    border-radius: 13px;
+    padding: 10px;
+}
+
+.log {
+    color: green;
 }

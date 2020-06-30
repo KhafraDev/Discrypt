@@ -4,17 +4,22 @@
         <meta charset="utf-8">
         <link rel="stylesheet" href="index.css" />
     </head>
+    <header>
+        <div>
+            <img src="khafra.png">
+            <label for="header">Discrypt</label>
+        </div>
+    </header>
     <body>
-        <form>
-            <div class="password">
-                <label for="passwordInput">Password</label>
-                <input type="password" id="passwordInput" placeholder="Password">
-            </div>
-            <button type="submit">Update Password</button>
-        </form>
+        <div class="password-update">
+            <label for="passwordInput">Password</label>
+            <input type="password" id="passwordInput" placeholder="Password">
+            <button id="update-button">Update Password</button>
+        </div>
         <button id="gp">Get Password</button>
-        <span></span>
-        <script src="index.js"></script>
+        <div class="log-holder">
+            <span class="log"></span>
+        </div>
+        <script src="passwordHandler.js"></script>
     </body>
-
 </html>
